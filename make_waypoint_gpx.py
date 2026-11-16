@@ -80,26 +80,29 @@ WP=[ # name, idx, table km, table ele, sym, type, note, (junction pair idx or No
  ('START',0,0.0,530,'Flag, Green','Generic','Start 04:00. Out on shared trunk.',None),
  ('J1 Fork',Z(3.54),None,None,None,None,'Fork: return route rejoins here at km ~99.3.',Z(99.32)),
  ('X out',Z(10.49),10.5,1640,None,None,'Junction X (1st pass) – start of out-and-back to cpA / turn point.',Z(25.45)),
- ('cpA-1',Z(13.40),13.4,1520,'Food','Food','Aid station cpA (outbound). CUTOFF 08:15 or DNF.',None),
+ ('cpA-1',Z(13.40),13.4,1520,'Food','Food','Checkpoint cpA Tea Farm 茶園 (outbound). CUTOFF 08:15 or DNF.',None),
  ('TURN',Z(18.10),18.1,1535,'U-Turn','U-Turn','Turn point ↶ U-TURN, return the same way to cpA.',None),
- ('cpA-2',Z(22.70),22.8,1520,'Food','Food','Aid station cpA (return). CUTOFF 10:15 or DNF.',None),
+ ('cpA-2',Z(22.70),22.8,1520,'Food','Food','Checkpoint cpA Tea Farm 茶園 (return). CUTOFF 10:15 or DNF.',None),
  ('X ret',Z(25.45),25.6,1640,None,None,'Junction X (2nd pass) – leave out-and-back, new trail toward Y.',Z(10.49)),
  ('Y out',Z(31.55),31.9,1550,None,None,'Junction Y (1st pass). Y–cpB shared with km 89–91.',Z(91.34)),
- ('cpB-1',Z(34.09),34.2,1310,'Food','Food','Aid station cpB (1st). CUTOFF 14:00 or DNF.',Z(88.81)),
+ ('cpB-1',Z(34.09),34.2,1310,'Food','Food','Checkpoint cpB Orange House Wujie 武界橘子屋 (1st). CUTOFF 14:00 or DNF.',Z(88.81)),
  ('Z out',Z(39.50),40.0,1470,None,None,'Junction Z (1st pass). Z–W shared with km 71–76.',Z(76.19)),
- ('W/cpC',Z(44.44),44.6,1410,None,None,'W – intersection near cpC (104K does NOT detour to cpC1). 14:00(14:30) 104→75K; 16:00 104K/75K→DNF.',Z(71.31)),
- ('cpD Bag',Z(49.78),50.0,710,'Food','Food','cpD Zhong Zheng – DROP BAG. CUTOFF 15:30 (must leave before) or DNF.',None),
+ ('W/cpC',Z(44.44),44.6,1410,None,None,'W – intersection near cpC (104K does NOT detour to cpC1 – no water/food here). 14:00(14:30) 104→75K; 16:00 104K/75K→DNF.',Z(71.31)),
+ ('cpD Bag',Z(49.78),50.0,710,'Food','Food','Checkpoint cpD Zhong Zheng 中正 (church) – DROP BAG. CUTOFF 15:30 (must leave before) or DNF.',None),
  ('TrailHead',i_trail,54.3,645,'Trail Head','Generic','Trail entry – start of big climb to Dajianshan (+1420 m in 7.2 km).',None),
  ('Dajianshan',i_summit,61.5,2017,'Summit','Summit','大尖山 2017 m – high point of course.',None),
- ('cpC2',Z(71.31),71.8,1410,'Food','Food','Aid station cpC2 at W intersection. CUTOFF 22:00 104K→DNF.',Z(44.44)),
+ ('cpC2',Z(71.31),71.8,1410,'Food','Food','Checkpoint cpC2 House 卓社林道 (Zhuoshe forest road 5K), at W intersection. CUTOFF 22:00 104K→DNF.',Z(44.44)),
  ('Z ret',Z(76.19),76.6,1470,None,None,'Junction Z (2nd pass) – leave shared section, new trail toward Wujie.',Z(39.50)),
  ('Wujie',i_wujie,86.4,760,'Valley','Valley','Wujie (武界) – low point, then +550 m climb to cpB2.',None),
- ('cpB-2',Z(88.81),89.6,1310,'Food','Food','Aid station cpB2. CUTOFF 04:00 104K→DNF.',Z(34.09)),
+ ('cpB-2',Z(88.81),89.6,1310,'Food','Food','Checkpoint cpB2 Orange House Wujie 武界橘子屋. CUTOFF 04:00 104K→DNF.',Z(34.09)),
  ('Y ret',Z(91.34),91.9,1550,None,None,'Junction Y (2nd pass) – leave shared section, final descent.',Z(31.55)),
  ('J1 Merge',Z(99.32),None,None,None,None,'Rejoin start trunk – same road as the first 3.5 km.',Z(3.54)),
  ('FINISH',len(pts)-1,103.5,530,'Flag, Checkered','Generic','Finish. Cutoff 08:00 (28 h).',None),
 ]
 WP.sort(key=lambda w:w[1])
+ZH={'cpA-1':'茶園','cpA-2':'茶園','cpB-1':'橘子屋','cpB-2':'橘子屋','cpC2':'卓社','cpD Bag':'中正'}
+# Only checkpoints (and the venue at start/finish) supply water/food.
+SUPPLY=[w for w in WP if w[4]=='Food' or w[0] in ('START','FINISH')]
 hull=plan_curve([(0.0,0.0)]+[(eff[w[1]],CUT[w[0]]) for w in WP if w[0] in CUT])
 scale=args.finish_hours/28.0
 plan=lambda i:START+timedelta(hours=hours_at(eff[i],hull)*scale)
@@ -112,6 +115,12 @@ for n,(name,i,km,tele,sym,typ,note,pair) in enumerate(WP):
         if sym is None: sym=typ=('Right' if side=='RIGHT' else 'Left')
     elif n<len(WP)-1:
         nb=brg(pts[i],pts[at(d[i]+150)]);desc.append(f'Leave heading {comp(nb)} ({nb:.0f}°).')
+    if sym=='Food': desc.append('WATER/FOOD available.')
+    nxs=[w for w in SUPPLY if w[1]>i]
+    if nxs:
+        ns=nxs[0];u,dn=ele_gain(i,ns[1])
+        sn=f"{ns[0]} {ZH.get(ns[0],'')}".strip()
+        desc.append(f'NEXT WATER/FOOD: {sn} in {(d[ns[1]]-d[i])/1000:.1f} km, +{u:.0f}/{dn:.0f} m, {(plan(ns[1])-plan(i)).total_seconds()/3600:.1f} h on plan.')
     if n<len(WP)-1:
         nx=WP[n+1];u,dn=ele_gain(i,nx[1])
         desc.append(f'NEXT: {nx[0]} in {(d[nx[1]]-d[i])/1000:.1f} km, +{u:.0f}/{dn:.0f} m.')
@@ -123,7 +132,7 @@ for n,(name,i,km,tele,sym,typ,note,pair) in enumerate(WP):
         ptxt+=f' (cutoff {fmt(START+timedelta(hours=CUT[name]))}, buffer {buf:.0f} min)'
     if n<len(WP)-1: ptxt+=f'; leg to {WP[n+1][0]} {(plan(WP[n+1][1])-tp).total_seconds()/3600:.1f} h'
     desc.insert(1,ptxt+'.')
-    label=f'{name} {km:.1f}' if km is not None else name
+    label=' '.join(x for x in (name,ZH.get(name),f'{km:.1f}' if km is not None else None) if x)
     wpts.append((pts[i],label,' '.join(desc),sym,typ,tp))
     rows.append((label,d[i]/1000,km,pts[i][2],tele,sym,tp))
 
