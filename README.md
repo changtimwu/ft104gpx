@@ -1,6 +1,8 @@
 # Formosa Trail 104K – GPX with waypoints
 
 The official Formosa Trail 2025 104K GPX (`FT104.gpx`) is only a bare track: it has no checkpoints, cutoffs or turn information.
+Official course info (map, GPX, checkpoints, cutoffs): **[Formosa Trail – Course 賽道](https://formosatrail.com/zh/course/)**.
+
 This repo creates `FT104_waypoints.gpx` from it. The new file keeps the same 8,096 track points, adds 21 waypoints built from the official distance table (`distancetable.txt`), and replaces the fake timestamps with a **cutoff-based pace plan**.
 
 ![FT104 elevation profile, 24 h plan](ft104_elevation_24h.png)
@@ -11,8 +13,8 @@ Cutoff-pace (28 h) version: [`ft104_elevation.png`](ft104_elevation.png)
 
 | File | What it is |
 |---|---|
-| `FT104.gpx` | Official track (GpsPrune export, GPX 1.0) |
-| `distancetable.txt` | Official distance / elevation / cutoff table |
+| `FT104.gpx` | Official track from the [course page](https://formosatrail.com/zh/course/) (GpsPrune export, GPX 1.0) |
+| `distancetable.txt` | Official distance / elevation / cutoff table, from the [course page](https://formosatrail.com/zh/course/) |
 | `ft104kcoursepic.png` | Course map (schematic, not to scale) |
 | `make_waypoint_gpx.py` | Script that creates the new GPX (Python 3 standard library only) |
 | `FT104_waypoints.gpx` | **Output to load onto your watch or app** (GPX 1.1), plan = cutoff pace (28 h) |
@@ -87,6 +89,7 @@ Every track point is timestamped, so a watch's **virtual partner** follows the p
 
 ## Caveats
 
+- This repo is unofficial. If anything here disagrees with the [official course page](https://formosatrail.com/zh/course/) or race briefing, the official information wins.
 - The GPX measures **102.85 km**, not 103.5 km. Later waypoints come up to about 0.8 km earlier than their official km.
 - **cpD is the least certain point.** Nothing in the track marks it, so it could be off by a few hundred meters.
 - **Junction positions can be about 50–100 m off** because of GPS drift where the two passes overlap. Treat the cues as a guide.
