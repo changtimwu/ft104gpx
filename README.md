@@ -3,6 +3,8 @@
 The official Formosa Trail 2025 104K GPX (`FT104.gpx`) is only a bare track: it has no checkpoints, cutoffs or turn information.
 This repo creates `FT104_waypoints.gpx` from it. The new file keeps the same 8,096 track points, adds 21 waypoints built from the official distance table (`distancetable.txt`), and replaces the fake timestamps with a **cutoff-based pace plan**.
 
+![FT104 elevation profile](ft104_elevation.png)
+
 ## Files
 
 | File | What it is |
@@ -12,6 +14,8 @@ This repo creates `FT104_waypoints.gpx` from it. The new file keeps the same 8,0
 | `ft104kcoursepic.png` | Course map (schematic, not to scale) |
 | `make_waypoint_gpx.py` | Script that creates the new GPX (Python 3 standard library only) |
 | `FT104_waypoints.gpx` | **Output to load onto your watch or app** (GPX 1.1) |
+| `make_elevation_chart.py` | Draws the elevation chart from the output GPX (`uv run`, pulls in matplotlib) |
+| `ft104_elevation.png` | Elevation profile with waypoints, planned times and night hours on the plan |
 
 ## What each waypoint has
 
@@ -80,4 +84,6 @@ Every track point is timestamped, so a watch's **virtual partner** follows the p
 python3 make_waypoint_gpx.py FT104.gpx FT104_waypoints.gpx
 # with options:
 python3 make_waypoint_gpx.py FT104.gpx FT104_24h.gpx --finish-hours 24 --start 2025-07-24T04:00
+# elevation chart (labels show the plan times inside the GPX you pass in):
+uv run make_elevation_chart.py FT104_waypoints.gpx ft104_elevation.png
 ```
