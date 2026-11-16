@@ -5,6 +5,8 @@ Official course info (map, GPX, checkpoints, cutoffs): **[Formosa Trail – Cour
 
 This repo creates `FT104_waypoints.gpx` from it. The new file keeps the same 8,096 track points, adds 21 waypoints built from the official distance table (`distancetable.txt`), and replaces the fake timestamps with a **cutoff-based pace plan**.
 
+![FT104 course map with direction arrows](ft104_course_map.png)
+
 ![FT104 elevation profile, 24 h plan](ft104_elevation_24h.png)
 
 Cutoff-pace (28 h) version: [`ft104_elevation.png`](ft104_elevation.png)
@@ -16,6 +18,7 @@ Cutoff-pace (28 h) version: [`ft104_elevation.png`](ft104_elevation.png)
 | `FT104.gpx` | Official track from the [course page](https://formosatrail.com/zh/course/) (GpsPrune export, GPX 1.0) |
 | `distancetable.txt` | Official distance / elevation / cutoff table, from the [course page](https://formosatrail.com/zh/course/) |
 | `ft104kcoursepic.png` | Course map (schematic, not to scale) |
+| `ft104_course_map.png` / `make_course_map.py` | Simpler map drawn from the real GPX, with direction arrows every 1 km, km markers every 10 km and checkpoints highlighted. Each direction is drawn on its own right-hand side, so out-and-back sections show two lines with opposite arrows |
 | `make_waypoint_gpx.py` | Script that creates the new GPX (Python 3 standard library only) |
 | `FT104_waypoints.gpx` | **Output to load onto your watch or app** (GPX 1.1), plan = cutoff pace (28 h) |
 | `FT104_24h.gpx` | Same, plan = 24 h finish (`--finish-hours 24`) |
@@ -105,4 +108,6 @@ python3 make_waypoint_gpx.py FT104.gpx FT104_24h.gpx --finish-hours 24   # add -
 # elevation charts (labels show the plan times inside the GPX you pass in):
 uv run make_elevation_chart.py FT104_waypoints.gpx ft104_elevation.png
 uv run make_elevation_chart.py FT104_24h.gpx ft104_elevation_24h.png
+# course map with direction arrows:
+uv run make_course_map.py FT104_waypoints.gpx ft104_course_map.png
 ```
