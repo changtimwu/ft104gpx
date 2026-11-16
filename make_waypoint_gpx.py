@@ -1,6 +1,14 @@
-import re,math,bisect,sys
+import re,math,bisect,argparse
+from datetime import datetime,timedelta,timezone
 from xml.sax.saxutils import escape
-src,out=sys.argv[1],sys.argv[2]
+ap=argparse.ArgumentParser(description='Add waypoints, direction cues and a cutoff-based pace plan to the FT104 GPX.')
+ap.add_argument('src');ap.add_argument('out')
+ap.add_argument('--start',default='2025-07-24T04:00',help='race start, local time (UTC+8), default %(default)s')
+ap.add_argument('--finish-hours',type=float,default=28.0,
+    help='target finish time in hours; the cutoff plan is scaled to fit (default 28 = cutoff pace)')
+args=ap.parse_args();src,out=args.src,args.out
+TZ=timezone(timedelta(hours=8))
+START=datetime.fromisoformat(args.start).replace(tzinfo=TZ)
 s=open(src).read()
 raw=re.findall(r'<trkpt lat="([^"]+)" lon="([^"]+)">\s*<ele>([^<]+)</ele>\s*<time>([^<]+)</time>',s)
 pts=[(float(a),float(b),float(e)) for a,b,e,_ in raw]
@@ -41,6 +49,28 @@ def ele_gain(a,b):
         x=pts[k][2]-pts[k-1][2]; u+=max(x,0); dn+=min(x,0)
     return u,dn
 
+# ---- pace plan ----------------------------------------------------------
+# Effort = km + D+/100 (ITRA "km-effort"), so climbs get more time than descents/flats.
+eff=[0.0]
+for k in range(1,len(pts)):
+    eff.append(eff[-1]+(d[k]-d[k-1])/1000+max(pts[k][2]-pts[k-1][2],0)/100)
+# Hours after 04:00 start by which the 104K runner must be at each point (distancetable.txt).
+CUT={'cpA-1':4.25,'cpA-2':6.25,'cpB-1':10.0,'W/cpC':10.0,'cpD Bag':11.5,'cpC2':18.0,'cpB-2':24.0,'FINISH':28.0}
+def plan_curve(anchors):
+    """Greatest convex minorant of (effort, cutoff hour) points: the latest schedule that never
+    misses a cutoff and only ever slows down (pace per effort-km is non-decreasing)."""
+    h=[]
+    for p in sorted(anchors):
+        while len(h)>=2 and (h[-1][0]-h[-2][0])*(p[1]-h[-2][1])-(h[-1][1]-h[-2][1])*(p[0]-h[-2][0])<=0: h.pop()
+        h.append(p)
+    return h
+def hours_at(e,h):
+    for (e0,t0),(e1,t1) in zip(h,h[1:]):
+        if e<=e1: return t0+(t1-t0)*(e-e0)/(e1-e0)
+    return h[-1][1]
+fmt=lambda dt:dt.strftime('%H:%M')
+iso=lambda dt:dt.astimezone(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
 # idx: anchor index into the GPX track; tbl: (km, ele, cut) from distancetable.txt
 Z=lambda km:at(km*1000)
 i_summit=max(range(len(pts)),key=lambda k:pts[k][2])
@@ -70,6 +100,9 @@ WP=[ # name, idx, table km, table ele, sym, type, note, (junction pair idx or No
  ('FINISH',len(pts)-1,103.5,530,'Flag, Checkered','Generic','Finish. Cutoff 08:00 (28 h).',None),
 ]
 WP.sort(key=lambda w:w[1])
+hull=plan_curve([(0.0,0.0)]+[(eff[w[1]],CUT[w[0]]) for w in WP if w[0] in CUT])
+scale=args.finish_hours/28.0
+plan=lambda i:START+timedelta(hours=hours_at(eff[i],hull)*scale)
 wpts=[];rows=[]
 for n,(name,i,km,tele,sym,typ,note,pair) in enumerate(WP):
     desc=[note]
@@ -84,19 +117,25 @@ for n,(name,i,km,tele,sym,typ,note,pair) in enumerate(WP):
         desc.append(f'NEXT: {nx[0]} in {(d[nx[1]]-d[i])/1000:.1f} km, +{u:.0f}/{dn:.0f} m.')
     kmtxt=f'{km:.1f} km (official)' if km is not None else ''
     desc.insert(0,f'{kmtxt}{" / " if kmtxt else ""}{d[i]/1000:.1f} km on GPX, {pts[i][2]:.0f} m.')
+    tp=plan(i);ptxt=f'PLAN {fmt(tp)}'
+    if name in CUT:
+        buf=(START+timedelta(hours=CUT[name])-tp).total_seconds()/60
+        ptxt+=f' (cutoff {fmt(START+timedelta(hours=CUT[name]))}, buffer {buf:.0f} min)'
+    if n<len(WP)-1: ptxt+=f'; leg to {WP[n+1][0]} {(plan(WP[n+1][1])-tp).total_seconds()/3600:.1f} h'
+    desc.insert(1,ptxt+'.')
     label=f'{name} {km:.1f}' if km is not None else name
-    wpts.append((pts[i],label,' '.join(desc),sym,typ))
-    rows.append((label,d[i]/1000,km,pts[i][2],tele,sym))
+    wpts.append((pts[i],label,' '.join(desc),sym,typ,tp))
+    rows.append((label,d[i]/1000,km,pts[i][2],tele,sym,tp))
 
 o=['<?xml version="1.0" encoding="UTF-8"?>',
 '<gpx version="1.1" creator="ft104gpx regen (from GpsPrune export + official distance table)" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">',
-' <metadata><name>Formosa Trail 2025 - 104km (waypoints)</name><desc>Official FT104 track + checkpoints, cutoffs and junction direction cues.</desc></metadata>']
-for p,label,desc,sym,typ in wpts:
-    o.append(f' <wpt lat="{p[0]}" lon="{p[1]}"><ele>{p[2]:.0f}</ele><name>{escape(label)}</name><cmt>{escape(desc)}</cmt><desc>{escape(desc)}</desc><sym>{escape(sym)}</sym><type>{escape(typ)}</type></wpt>')
+f' <metadata><name>Formosa Trail 2025 - 104km (waypoints)</name><desc>Official FT104 track + checkpoints, cutoffs, junction direction cues. Track timestamps = pace plan, {args.finish_hours:g} h finish from {args.start} (UTC+8).</desc></metadata>']
+for p,label,desc,sym,typ,tp in wpts:
+    o.append(f' <wpt lat="{p[0]}" lon="{p[1]}"><ele>{p[2]:.0f}</ele><time>{iso(tp)}</time><name>{escape(label)}</name><cmt>{escape(desc)}</cmt><desc>{escape(desc)}</desc><sym>{escape(sym)}</sym><type>{escape(typ)}</type></wpt>')
 o.append(' <trk><name>Formosa Trail 2025 - 104km</name><trkseg>')
-for (a,b,e,t) in raw: o.append(f'  <trkpt lat="{a}" lon="{b}"><ele>{e}</ele><time>{t}</time></trkpt>')
+for k,(a,b,e,_) in enumerate(raw): o.append(f'  <trkpt lat="{a}" lon="{b}"><ele>{e}</ele><time>{iso(plan(k))}</time></trkpt>')
 o.append(' </trkseg></trk>\n</gpx>')
 open(out,'w').write('\n'.join(o))
-print(f"{'name':18}{'gpx km':>8}{'tbl km':>8}{'gpx m':>7}{'tbl m':>7}  sym")
-for r in rows: print(f"{r[0]:18}{r[1]:8.2f}{(r[2] if r[2] is not None else float('nan')):8.1f}{r[3]:7.0f}{(r[4] or 0):7}  {r[5]}")
-for p,label,desc,sym,typ in wpts: print('-',label,'|',desc)
+print(f"{'name':18}{'gpx km':>8}{'tbl km':>8}{'gpx m':>7}{'tbl m':>7}  {'plan':6} sym")
+for r in rows: print(f"{r[0]:18}{r[1]:8.2f}{(r[2] if r[2] is not None else float('nan')):8.1f}{r[3]:7.0f}{(r[4] or 0):7}  {fmt(r[6]):6} {r[5]}")
+for w in wpts: print('-',w[1],'|',w[2])
