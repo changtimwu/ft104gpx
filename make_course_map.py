@@ -104,7 +104,7 @@ def title(pl):
 
 # label positions (dx, dy in km from the point), tuned for this course
 POS = {"START": (-1.1, 0.55), "J1": (0.0, -0.75), "X": (0.1, 0.75), "cpA": (0.0, 0.85), "TURN": (0.9, 0.6),
-       "Y": (0.95, 0.15), "cpB": (-1.6, 0.0), "Z": (1.0, 0.25), "W/cpC": (1.1, -1.5), "cpC2": (-1.65, -0.55),
+       "Y": (1.6, -0.35), "cpB": (-1.6, 0.0), "Z": (-1.0, 1.25), "W/cpC": (1.1, -1.5), "cpC2": (-1.65, -0.55),
        "cpD": (0.3, 1.0), "TrailHead": (-1.1, -0.9), "Dajianshan": (-1.3, 0.5), "Wujie": (1.1, -0.4),
        "FINISH": (-1.1, 0.55)}
 for pl in places:
