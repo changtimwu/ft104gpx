@@ -55,8 +55,22 @@ for a in (fig, ax, gx): a.set_facecolor(SURF)
 YMIN = 300
 ax.set_xlim(0, km[-1])
 
-# night band on the plan (sunset ~18:45, sunrise ~05:20 in late July, Nantou)
-def is_night(t): m = t.hour * 60 + t.minute; return m >= 18 * 60 + 45 or m < 5 * 60 + 20
+# night band on the plan: sunrise/sunset (NOAA approximation) for each track point's date, at the course
+def sun_minutes(day, lat=23.9, lon=121.0, tz=8):
+    g = 2 * math.pi / 365 * (day.timetuple().tm_yday - 1)
+    eqt = 229.18 * (0.000075 + 0.001868 * math.cos(g) - 0.032077 * math.sin(g) - 0.014615 * math.cos(2 * g) - 0.040849 * math.sin(2 * g))
+    dec = (0.006918 - 0.399912 * math.cos(g) + 0.070257 * math.sin(g) - 0.006758 * math.cos(2 * g)
+           + 0.000907 * math.sin(2 * g) - 0.002697 * math.cos(3 * g) + 0.00148 * math.sin(3 * g))
+    ha = math.degrees(math.acos(math.cos(math.radians(90.833)) / (math.cos(math.radians(lat)) * math.cos(dec))
+                                - math.tan(math.radians(lat)) * math.tan(dec)))
+    noon = 720 - 4 * lon - eqt + tz * 60
+    return noon - 4 * ha, noon + 4 * ha
+_sun = {}
+def is_night(t):
+    rise, set_ = _sun.setdefault(t.date(), sun_minutes(t.date()))
+    m = t.hour * 60 + t.minute; return m >= set_ or m < rise
+r0, s0 = sun_minutes(times[0].date())
+SUNTXT = f"sunrise {int(r0 // 60):02d}:{int(r0 % 60):02d} / sunset {int(s0 // 60):02d}:{int(s0 % 60):02d} on {times[0]:%Y-%m-%d}"
 start = None
 for i, t in enumerate(times + [None]):
     n = t is not None and is_night(t)
@@ -122,9 +136,9 @@ plan = "cutoff pace (28 h)" if abs(hours - 28) < 1e-6 else f"{hours:g} h finish"
 fig.text(0.055, 0.965, f"Formosa Trail 104K — elevation profile · plan: {plan}", fontsize=17, fontweight="bold", color=INK, va="top")
 fig.text(0.055, 0.928,
          f"{km[-1]:.1f} km on GPX (official 103.5)  ·  +{gain:.0f} m / −{gain:.0f} m  ·  high point 大尖山 {max(ele):.0f} m  ·  "
-         f"times = planned arrival, start {times[0]:%H:%M} → finish {times[-1]:%H:%M}  ·  "
-         "blue tag = checkpoint (water/food), black = key point, grey = junction",
+         f"times = planned arrival, start {times[0]:%H:%M} → finish {times[-1]:%H:%M}\n"
+         f"blue tag = checkpoint (water/food), black = key point, grey = junction  ·  shaded = night ({SUNTXT})",
          fontsize=10, color=INK2, va="top")
-fig.subplots_adjust(left=0.055, right=0.985, top=0.9, bottom=0.07)
+fig.subplots_adjust(left=0.055, right=0.985, top=0.875, bottom=0.07)
 fig.savefig(out, facecolor=SURF)
 print("wrote", out)

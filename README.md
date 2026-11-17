@@ -18,6 +18,7 @@ Cutoff-pace (28 h) version: [`ft104_elevation.png`](ft104_elevation.png)
 | File | What it is |
 |---|---|
 | `FT104.gpx` | Official track from the [course page](https://formosatrail.com/zh/course/) (GpsPrune export, GPX 1.0) |
+| `FUELING.md` | Fueling strategy: gaps between checkpoints, cold-night plan, what to carry, drop bag |
 | `distancetable.txt` | Official distance / elevation / cutoff table, from the [course page](https://formosatrail.com/zh/course/) |
 | `ft104kcoursepic.png` | Course map (schematic, not to scale) |
 | `ft104_course_map.png` / `ft104_course_map_24h.png` / `make_course_map.py` | Simpler map drawn from the real GPX, for the 28 h / 24 h plan, with planned arrival times on every label, direction arrows every 1 km, km markers every 10 km and checkpoints highlighted. Each direction is drawn on its own right-hand side, so out-and-back sections show two lines with opposite arrows |
@@ -25,7 +26,9 @@ Cutoff-pace (28 h) version: [`ft104_elevation.png`](ft104_elevation.png)
 | `FT104_waypoints.gpx` | **Output to load onto your watch or app** (GPX 1.1), plan = cutoff pace (28 h) |
 | `FT104_24h.gpx` | Same, plan = 24 h finish (`--finish-hours 24`) |
 | `make_elevation_chart.py` | Draws the elevation chart from the output GPX (`uv run`, pulls in matplotlib) |
-| `ft104_elevation.png` / `ft104_elevation_24h.png` | Elevation profile for the 28 h / 24 h plan: checkpoints highlighted, planned times, night hours, water/food gaps |
+| `ft104_elevation.png` / `ft104_elevation_24h.png` | Elevation profile for the 28 h / 24 h plan: checkpoints highlighted, planned times, night hours on race day, water/food gaps |
+
+**Fueling & cold-night plan:** see [FUELING.md](FUELING.md) for water and carbs per segment, the cpD drop bag list and night temperatures.
 
 ## Checkpoints – the only water/food
 
@@ -83,7 +86,7 @@ Every track point is timestamped, so a watch's **virtual partner** follows the p
 - **Fitted to the cutoffs:** the plan is the latest schedule that never misses a 104K cutoff, with a pace that only ever slows down (realistic for a 28 h race). Technically, it is the greatest convex minorant of the (effort, cutoff) points.
 - **Binding cutoffs:** at the default 28 h, these are W 14:00 (stay on the 104K), cpC2 22:00 and the finish 08:00. The other checkpoints come out with buffer.
 - **Default 28 h = cutoff pace.** Falling behind the virtual partner means you are on track to miss a cutoff. To plan with a margin, scale the whole plan to your target time with `--finish-hours`, e.g. `--finish-hours 24` reaches W at 12:34 and the finish at 04:00.
-- **Start time:** 04:00 local (UTC+8). The default date is the track's original date (2025-07-24). Set the real race date with `--start YYYY-MM-DDT04:00`.
+- **Start time:** race day, Sat 21 Nov 2026, 04:00 local (UTC+8). This is the default; change it with `--start YYYY-MM-DDT04:00`. The charts shade the night using the real sunrise (06:14) and sunset (17:09) for that date.
 
 ## How the waypoints are placed
 
@@ -106,7 +109,7 @@ Every track point is timestamped, so a watch's **virtual partner** follows the p
 ```sh
 python3 make_waypoint_gpx.py FT104.gpx FT104_waypoints.gpx
 # with options:
-python3 make_waypoint_gpx.py FT104.gpx FT104_24h.gpx --finish-hours 24   # add --start YYYY-MM-DDT04:00 for the race date
+python3 make_waypoint_gpx.py FT104.gpx FT104_24h.gpx --finish-hours 24   # default start: 2026-11-21T04:00
 # elevation charts (labels show the plan times inside the GPX you pass in):
 uv run make_elevation_chart.py FT104_waypoints.gpx ft104_elevation.png
 uv run make_elevation_chart.py FT104_24h.gpx ft104_elevation_24h.png

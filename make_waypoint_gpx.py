@@ -3,7 +3,7 @@ from datetime import datetime,timedelta,timezone
 from xml.sax.saxutils import escape
 ap=argparse.ArgumentParser(description='Add waypoints, direction cues and a cutoff-based pace plan to the FT104 GPX.')
 ap.add_argument('src');ap.add_argument('out')
-ap.add_argument('--start',default='2025-07-24T04:00',help='race start, local time (UTC+8), default %(default)s')
+ap.add_argument('--start',default='2026-11-21T04:00',help='race start, local time (UTC+8), default %(default)s')
 ap.add_argument('--finish-hours',type=float,default=28.0,
     help='target finish time in hours; the cutoff plan is scaled to fit (default 28 = cutoff pace)')
 args=ap.parse_args();src,out=args.src,args.out
