@@ -1,5 +1,7 @@
 # FT104 Fueling Strategy
 
+English · [中文](FUELING.zh-TW.md)
+
 Water and food are only available at checkpoints, and the second half of the race has the longest gaps between them, run mostly in the dark and cold. This plan is built around two numbers for each gap: **how long you'll be out there** and **how much you must carry**.
 
 > General guidance, not medical advice. Sweat rate and gut tolerance vary a lot between people, so test these numbers in long training runs and adjust them.

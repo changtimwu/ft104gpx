@@ -18,7 +18,7 @@ Cutoff-pace (28 h) version: [`ft104_elevation.png`](ft104_elevation.png)
 | File | What it is |
 |---|---|
 | `FT104.gpx` | Official track from the [course page](https://formosatrail.com/zh/course/) (GpsPrune export, GPX 1.0) |
-| `FUELING.md` | Fueling strategy: gaps between checkpoints, cold-night plan, what to carry, drop bag |
+| `FUELING.md` / `FUELING.zh-TW.md` | Fueling strategy (English / 中文): gaps between checkpoints, cold-night plan, what to carry, drop bag |
 | `distancetable.txt` | Official distance / elevation / cutoff table, from the [course page](https://formosatrail.com/zh/course/) |
 | `ft104kcoursepic.png` | Course map (schematic, not to scale) |
 | `ft104_course_map.png` / `ft104_course_map_24h.png` / `make_course_map.py` | Simpler map drawn from the real GPX, for the 28 h / 24 h plan, with planned arrival times on every label, direction arrows every 1 km, km markers every 10 km and checkpoints highlighted. Each direction is drawn on its own right-hand side, so out-and-back sections show two lines with opposite arrows |
@@ -28,7 +28,7 @@ Cutoff-pace (28 h) version: [`ft104_elevation.png`](ft104_elevation.png)
 | `make_elevation_chart.py` | Draws the elevation chart from the output GPX (`uv run`, pulls in matplotlib) |
 | `ft104_elevation.png` / `ft104_elevation_24h.png` | Elevation profile for the 28 h / 24 h plan: checkpoints highlighted, planned times, night hours on race day, water/food gaps |
 
-**Fueling & cold-night plan:** see [FUELING.md](FUELING.md) for water and carbs per segment, the cpD drop bag list and night temperatures.
+**Fueling & cold-night plan:** see [FUELING.md](FUELING.md) ([中文](FUELING.zh-TW.md)) for water and carbs per segment, the cpD drop bag list and night temperatures.
 
 ## Checkpoints – the only water/food
 
