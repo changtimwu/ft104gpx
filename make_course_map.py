@@ -19,8 +19,13 @@ src, out = (sys.argv + ["FT104_waypoints.gpx", "ft104_course_map.png"])[1:3]
 s = open(src, encoding="utf-8").read()
 trk = [(float(a), float(b), float(e)) for a, b, e in re.findall(
     r'<trkpt lat="([^"]+)" lon="([^"]+)"><ele>([^<]+)</ele>', s)]
-wps = [(float(a), float(b), n, sym) for a, b, n, sym in re.findall(
-    r'<wpt lat="([^"]+)" lon="([^"]+)">.*?<name>([^<]+)</name>.*?<sym>([^<]+)</sym>', s)]
+from datetime import datetime, timedelta, timezone
+TZ = timezone(timedelta(hours=8))
+hhmm = lambda t: datetime.strptime(t, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc).astimezone(TZ).strftime("%H:%M")
+wps = [(float(a), float(b), n, sym, hhmm(t)) for a, b, t, n, sym in re.findall(
+    r'<wpt lat="([^"]+)" lon="([^"]+)"><ele>[^<]+</ele><time>([^<]+)</time><name>([^<]+)</name>.*?<sym>([^<]+)</sym>', s)]
+hours = float((re.search(r"pace plan, ([\d.]+) h finish", s) or [0, 28])[1])
+PLAN = "cutoff pace (28 h)" if abs(hours - 28) < 1e-6 else f"{hours:g} h finish"
 
 # ---- local projection in km ----
 LAT0 = sum(p[0] for p in trk) / len(trk); LON0 = sum(p[1] for p in trk) / len(trk)
@@ -72,7 +77,7 @@ d = 0.6
 while d < D[-1] - 0.3:
     i, j = at(d - 0.08), at(d + 0.08)
     ax.annotate("", xy=Q[j], xytext=Q[i], zorder=4,
-                arrowprops=dict(arrowstyle="-|>,head_length=1.05,head_width=0.55", color=BLUE_DARK, lw=0,
+                arrowprops=dict(arrowstyle="-|>,head_length=0.62,head_width=0.32", color=BLUE_DARK, lw=0,
                                 shrinkA=0, shrinkB=0))
     d += STEP
 
@@ -88,27 +93,27 @@ for k in range(10, int(D[-1]) + 1, 10):
 # ---- waypoints merged by place (same spot visited twice -> one label) ----
 def kmlabel(n): m = re.search(r"(\d+\.\d)$", n); return m.group(1) if m else None
 places = []
-for lat, lon, name, sym in wps:
+for lat, lon, name, sym, tm in wps:
     p = xy(lat, lon)
     for pl in places:
-        if math.dist(pl["p"], p) < 0.35 and (pl["cp"] == (sym == "Food")): pl["items"].append((name, sym)); break
+        if math.dist(pl["p"], p) < 0.35 and (pl["cp"] == (sym == "Food")): pl["items"].append((name, sym, tm)); break
     else:
-        places.append(dict(p=p, items=[(name, sym)], cp=sym == "Food"))
+        places.append(dict(p=p, items=[(name, sym, tm)], cp=sym == "Food"))
 
 def title(pl):
-    names = [n for n, _ in pl["items"]]
+    names = [it[0] for it in pl["items"]]
     kms = [k for k in map(kmlabel, names) if k]
     base = re.sub(r"\s*\d+\.\d$", "", names[0])
     base = re.sub(r"-\d(?=\s|$)|\s(out|ret)$", "", base.replace("cpD Bag", "cpD"))
-    return base, " / ".join(kms)
+    return base, " / ".join(kms), " / ".join(it[2] for it in pl["items"])
 
 # label positions (dx, dy in km from the point), tuned for this course
-POS = {"START": (-1.1, 0.55), "J1": (0.0, -0.75), "X": (0.1, 0.75), "cpA": (0.0, 0.85), "TURN": (0.9, 0.6),
+POS = {"START": (-1.1, 0.55), "J1": (1.0, -0.55), "X": (0.1, 0.95), "cpA": (0.0, 0.85), "TURN": (0.9, 0.6),
        "Y": (1.6, -0.35), "cpB": (-1.6, 0.0), "Z": (-1.0, 1.25), "W/cpC": (1.1, -1.5), "cpC2": (-1.65, -0.55),
        "cpD": (0.3, 1.0), "TrailHead": (-1.1, -0.9), "Dajianshan": (-1.3, 0.5), "Wujie": (1.1, -0.4),
        "FINISH": (-1.1, 0.55)}
 for pl in places:
-    base, kms = title(pl)
+    base, kms, tms = title(pl)
     key = next((k for k in POS if base.startswith(k)), None)
     if base.startswith(("START", "FINISH")):
         continue
@@ -117,7 +122,7 @@ for pl in places:
     ax.plot([x, tx], [y, ty], color=MUTED, lw=0.7, zorder=3.5)
     if pl["cp"]:
         ax.scatter([x], [y], s=170, color=CP_FILL, edgecolor=SURF, linewidth=2.2, zorder=7)
-        ax.text(tx, ty, f"{base}\n{kms} km", fontsize=10.5, color="white", ha="center", va="center", zorder=8,
+        ax.text(tx, ty, f"{base}\n{kms} km\n{tms}", fontsize=10.5, color="white", ha="center", va="center", zorder=8,
                 linespacing=1.25, bbox=dict(boxstyle="round,pad=0.4", fc=CP_FILL, ec="none"))
     else:
         sym = pl["items"][0][1]
@@ -125,14 +130,14 @@ for pl in places:
         ax.scatter([x], [y], s=55 if strong else 34, color=SURF, edgecolor=INK if strong else INK2, linewidth=1.6, zorder=7)
         nice = {"Dajianshan": "大尖山 2017 m", "TURN": "Turn point ↶", "TrailHead": "Trail entry",
                 "Wujie": "Wujie 武界", "W/cpC": "W junction\nno water"}.get(base, base.replace(" Fork", "").replace(" Merge", ""))
-        ax.text(tx, ty, f"{nice}\n{kms} km" if kms else nice, fontsize=9.5 if strong else 9,
+        ax.text(tx, ty, f"{nice}\n{kms} km\n{tms}" if kms else f"{nice}\n{tms}", fontsize=9.5 if strong else 9,
                 color=INK if strong else INK2, ha="center", va="center", zorder=8, linespacing=1.2,
                 bbox=dict(boxstyle="round,pad=0.3", fc=SURF, ec=GRID, lw=0.8))
 
 # start / finish flag
 sx, sy = P[0]
 ax.scatter([sx], [sy], s=230, marker="s", color=INK, edgecolor=SURF, linewidth=2.2, zorder=9)
-ax.text(sx + POS["START"][0], sy + POS["START"][1], "START / FINISH\n0 / 103.5 km  ·  04:00", fontsize=10.5,
+ax.text(sx + POS["START"][0], sy + POS["START"][1], f"START / FINISH\n0 / 103.5 km\n{wps[0][4]} → {wps[-1][4]}", fontsize=10.5,
         color="white", ha="center", va="center", zorder=9, linespacing=1.25,
         bbox=dict(boxstyle="round,pad=0.4", fc=INK, ec="none"))
 ax.plot([sx, sx + POS["START"][0]], [sy, sy + POS["START"][1]], color=MUTED, lw=0.7, zorder=3.5)
@@ -147,11 +152,11 @@ ax.plot([x0 + 1, x0 + 1], [y0 + 0.22, y0 + 0.38], color=INK, lw=1)
 ax.text(x0 + 1, y0 + 0.02, "2 km   (grid = 1 km)", ha="center", va="center", fontsize=8.5, color=INK2)
 
 top = 0.98
-fig.text(0.03, top, "Formosa Trail 104K — course map", fontsize=19, fontweight="bold", color=INK, va="top")
+fig.text(0.03, top, f"Formosa Trail 104K — course map · plan: {PLAN}", fontsize=19, fontweight="bold", color=INK, va="top")
 fig.text(0.03, top - 0.03,
          "Follow the arrows. Each direction is drawn on its own right-hand side, so out-and-back and shared\n"
          "sections show two lines with opposite arrows.  Blue tags = checkpoints, the only water/food.  "
-         "Numbers in boxes = km.", fontsize=10, color=INK2, va="top", linespacing=1.35)
+         "Small boxes = km.\nTimes = planned arrival on this plan (start 04:00).", fontsize=10, color=INK2, va="top", linespacing=1.35)
 fig.text(0.97, 0.012, "Route from the official GPX · formosatrail.com/zh/course · unofficial map",
          fontsize=8, color=MUTED, ha="right")
 fig.savefig(out, facecolor=SURF)
